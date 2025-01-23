@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
+
 class Mediator implements IMediator {
 
     private final ApplicationContext applicationContext;
@@ -340,7 +341,12 @@ class Mediator implements IMediator {
                     if (rawType.equals(targetInterface)) {
                         // paramType is generic type containing response type
                         Type responseType = paramType.getActualTypeArguments()[0];
-                        return ResolvableType.forType(responseType).resolve();
+                        // for none explicit generic argument like TResponse result will be null
+                        var result = ResolvableType.forType(responseType).resolve();
+
+                        if (result != null && result != Object.class) {
+                            return result;
+                        }
                     }
                 }
             }
