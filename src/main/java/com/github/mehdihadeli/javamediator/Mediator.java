@@ -1,5 +1,6 @@
 package com.github.mehdihadeli.javamediator;
 
+import com.github.mehdihadeli.javamediator.abstractions.HaveResponseType;
 import com.github.mehdihadeli.javamediator.abstractions.IMediator;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommand;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommandHandler;
@@ -13,9 +14,8 @@ import com.github.mehdihadeli.javamediator.abstractions.requests.IPipelineBehavi
 import com.github.mehdihadeli.javamediator.abstractions.requests.IRequest;
 import com.github.mehdihadeli.javamediator.abstractions.requests.IRequestHandler;
 import com.github.mehdihadeli.javamediator.abstractions.requests.RequestHandlerDelegate;
+import com.github.mehdihadeli.javamediator.utils.ReflectionUtils;
 import com.github.mehdihadeli.javamediator.utils.SpringBeanUtils;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 
 class Mediator implements IMediator {
 
@@ -111,8 +112,8 @@ class Mediator implements IMediator {
     }
 
     private <TRequest extends IRequest<TResponse>, TResponse>
-            IRequestHandler<TRequest, TResponse> resolveRequestHandler(
-                    TRequest request, ApplicationContext applicationContext) {
+    IRequestHandler<TRequest, TResponse> resolveRequestHandler(
+            TRequest request, ApplicationContext applicationContext) {
         return (IRequestHandler<TRequest, TResponse>) requestHandlerCache.computeIfAbsent(
                 // request hashmap key (Class<?>)
                 request.getClass(),
@@ -152,14 +153,15 @@ class Mediator implements IMediator {
     }
 
     private <TCommand extends ICommand<TResponse>, TResponse>
-            ICommandHandler<TCommand, TResponse> resolveCommandHandler(
-                    TCommand command, ApplicationContext applicationContext) {
+    ICommandHandler<TCommand, TResponse> resolveCommandHandler(
+            TCommand command, ApplicationContext applicationContext) {
         return (ICommandHandler<TCommand, TResponse>) commandHandlerCache.computeIfAbsent(
                 // command hashmap key (Class<?>)
                 command.getClass(),
                 // try to get our hash map key data in existing dictionary if not exist get it with this lambda
                 requestType -> {
                     var responseType = getResponseTypeFromRequest(command);
+
                     String format = String.format(
                             "Not registered a command handler for type: '%s'",
                             command.getClass().getName());
@@ -231,12 +233,13 @@ class Mediator implements IMediator {
     }
 
     private <TRequest extends IRequest<TResponse>, TResponse>
-            List<IPipelineBehavior<TRequest, TResponse>> resolveRequestPipelineBehaviors(
-                    TRequest request, ApplicationContext applicationContext) {
+    List<IPipelineBehavior<TRequest, TResponse>> resolveRequestPipelineBehaviors(
+            TRequest request, ApplicationContext applicationContext) {
 
         return requestPipelineCache
                 .computeIfAbsent(request.getClass(), requestTypeInput -> {
                     var responseType = getResponseTypeFromRequest(request);
+
                     if (responseType == null) {
                         // Pipelines are optional, return an empty list if no response type is found
                         return Collections.emptyList();
@@ -265,8 +268,8 @@ class Mediator implements IMediator {
     }
 
     private <TNotification extends INotification>
-            List<INotificationPipelineBehavior<TNotification>> resolveNotificationPipelineBehaviors(
-                    TNotification notification, ApplicationContext applicationContext) {
+    List<INotificationPipelineBehavior<TNotification>> resolveNotificationPipelineBehaviors(
+            TNotification notification, ApplicationContext applicationContext) {
 
         // Using computeIfAbsent to retrieve or compute the value if absent
         return notificationPipelineCache
@@ -295,7 +298,7 @@ class Mediator implements IMediator {
 
     private <TNotification extends INotification> @Nullable
             INotificationHandler<TNotification> resolveNotificationHandler(
-                    TNotification notification, ApplicationContext applicationContext) {
+            TNotification notification, ApplicationContext applicationContext) {
         var result = notificationHandlerCache.computeIfAbsent(
                 // notification hashmap key (Class<?>)
                 notification.getClass(),
@@ -318,17 +321,24 @@ class Mediator implements IMediator {
         return result != null ? (INotificationHandler<TNotification>) result : null;
     }
 
-    private <TRequest> Class<?> getResponseTypeFromRequest(TRequest request) {
+    private <TRequest extends IRequest<TResponse>, TResponse> Class<?> getResponseTypeFromRequest(TRequest request) {
+        if (request instanceof HaveResponseType<?> haveResponseType) {
+            return haveResponseType.getResponseType();
+        }
+
         // List of interfaces we want to check
         Class<?>[] targetInterfaces = {IRequest.class, IQuery.class, ICommand.class};
 
-        Type[] genericInterfaces = request.getClass().getGenericInterfaces();
+        var genericImplementedInterfaces = ReflectionUtils.getAllImplementedInterfaces(request.getClass());
 
-        for (Type genericInterface : genericInterfaces) {
-            if (genericInterface instanceof ParameterizedType paramType) {
+        for (Type implementedInterface : genericImplementedInterfaces) {
+            // if interface is a generic type with a response type
+            if (implementedInterface instanceof ParameterizedType paramType) {
+                // returns the raw (non-generic) type of the generic declaration
                 Type rawType = paramType.getRawType();
                 for (Class<?> targetInterface : targetInterfaces) {
                     if (rawType.equals(targetInterface)) {
+                        // paramType is generic type containing response type
                         Type responseType = paramType.getActualTypeArguments()[0];
                         return ResolvableType.forType(responseType).resolve();
                     }
@@ -338,10 +348,4 @@ class Mediator implements IMediator {
 
         return null;
     }
-
-    @PostConstruct
-    public void postConstruct() {}
-
-    @PreDestroy
-    public void preDestroy() {}
 }
