@@ -1,6 +1,6 @@
 package com.github.mehdihadeli.javamediator;
 
-import com.github.mehdihadeli.javamediator.abstractions.IMediator;
+import com.github.mehdihadeli.javamediator.abstractions.Mediator;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommand;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommandHandler;
 import com.github.mehdihadeli.javamediator.abstractions.notifications.INotification;
@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 
 
-class Mediator implements IMediator {
+class MediatorImpl implements Mediator {
 
     private final ApplicationContext applicationContext;
 
@@ -42,7 +42,7 @@ class Mediator implements IMediator {
     private final ConcurrentHashMap<Class<?>, List<INotificationPipelineBehavior<?>>> notificationPipelineCache =
             new ConcurrentHashMap<>();
 
-    Mediator(ApplicationContext applicationContext) {
+    MediatorImpl(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 
