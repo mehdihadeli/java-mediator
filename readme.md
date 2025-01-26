@@ -1,8 +1,8 @@
 # Java Mediator
 
-> This package is a `Mediator Pattern` implementation in golang, and inspired by great [jbogard/mediatr](https://github.com/jbogard/mediatr) library in .Net.
+> This package is a `Mediator Pattern` implementation in java to use in CQRS pattern, and inspired by great [jbogard/mediatr](https://github.com/jbogard/mediatr) library in .Net.
 
-For decoupling some objects in a system we could use `Mediator` object as an interface, for decrease coupling between the objects. Mostly I uses this pattern when I use CQRS in my system.
+For decoupling some objects in a system we can use `Mediator` object as an interface to decrease coupling between the objects. Mostly I uses this pattern when I use CQRS in my system.
 
 ## 🧰 Installation
 
