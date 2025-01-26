@@ -91,10 +91,10 @@ class MediatorImpl implements Mediator {
     }
 
     @Override
-    public <TNotification extends INotification> Void publish(TNotification notification) throws RuntimeException {
+    public <TNotification extends INotification> void publish(TNotification notification) throws RuntimeException {
         var notificationHandler = resolveNotificationHandler(notification, applicationContext);
         if (notificationHandler == null) {
-            return null;
+            return ;
         }
 
         var notificationPipelineBehaviors = resolveNotificationPipelineBehaviors(notification, applicationContext);
@@ -106,7 +106,17 @@ class MediatorImpl implements Mediator {
             handlerChain = () -> behavior.handle(notification, current);
         }
 
-        return handlerChain.handle();
+        handlerChain.handle();
+    }
+
+    @Override
+    public void publish(Object notification) throws RuntimeException {
+        if (notification instanceof INotification instance) {
+            this.publish(instance);
+        } else {
+            throw new IllegalArgumentException(
+                    "notification does not implement " + INotification.class.getSimpleName());
+        }
     }
 
     private <TRequest extends IRequest<TResponse>, TResponse>
