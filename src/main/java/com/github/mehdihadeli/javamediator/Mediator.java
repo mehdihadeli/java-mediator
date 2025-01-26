@@ -1,6 +1,5 @@
 package com.github.mehdihadeli.javamediator;
 
-import com.github.mehdihadeli.javamediator.abstractions.HaveResponseType;
 import com.github.mehdihadeli.javamediator.abstractions.IMediator;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommand;
 import com.github.mehdihadeli.javamediator.abstractions.commands.ICommandHandler;
@@ -20,8 +19,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,7 +117,7 @@ class Mediator implements IMediator {
                 request.getClass(),
                 // try to get our hash map key in existing dictionary if not exist get it with this lambda
                 requestType -> {
-                    var responseType = getResponseTypeFromRequest(request);
+                    var responseType = ReflectionUtils.getGenericTypeUsingReflection(request, IRequest.class);
 
                     String format = String.format(
                             "Not registered a request handler for type: '%s'",
@@ -161,7 +158,7 @@ class Mediator implements IMediator {
                 command.getClass(),
                 // try to get our hash map key data in existing dictionary if not exist get it with this lambda
                 requestType -> {
-                    var responseType = getResponseTypeFromRequest(command);
+                    var responseType = ReflectionUtils.getGenericTypeUsingReflection(command, ICommand.class);
 
                     String format = String.format(
                             "Not registered a command handler for type: '%s'",
@@ -201,7 +198,7 @@ class Mediator implements IMediator {
                 query.getClass(),
                 // try to get our hash map key data in existing dictionary if not exist get it with this lambda
                 requestType -> {
-                    var responseType = getResponseTypeFromRequest(query);
+                    var responseType = ReflectionUtils.getGenericTypeUsingReflection(query, IQuery.class);
 
                     String format = String.format(
                             "Not registered a query handler for type: '%s'",
@@ -239,7 +236,7 @@ class Mediator implements IMediator {
 
         return requestPipelineCache
                 .computeIfAbsent(request.getClass(), requestTypeInput -> {
-                    var responseType = getResponseTypeFromRequest(request);
+                    var responseType = ReflectionUtils.getGenericTypeUsingReflection(request, IRequest.class);
 
                     if (responseType == null) {
                         // Pipelines are optional, return an empty list if no response type is found
@@ -320,38 +317,5 @@ class Mediator implements IMediator {
                 });
 
         return result != null ? (INotificationHandler<TNotification>) result : null;
-    }
-
-    private <TRequest extends IRequest<TResponse>, TResponse> Class<?> getResponseTypeFromRequest(TRequest request) {
-        if (request instanceof HaveResponseType<?> haveResponseType) {
-            return haveResponseType.getResponseType();
-        }
-
-        // List of interfaces we want to check
-        Class<?>[] targetInterfaces = {IRequest.class, IQuery.class, ICommand.class};
-
-        var genericImplementedInterfaces = ReflectionUtils.getAllImplementedInterfaces(request.getClass());
-
-        for (Type implementedInterface : genericImplementedInterfaces) {
-            // if interface is a generic type with a response type
-            if (implementedInterface instanceof ParameterizedType paramType) {
-                // returns the raw (non-generic) type of the generic declaration
-                Type rawType = paramType.getRawType();
-                for (Class<?> targetInterface : targetInterfaces) {
-                    if (rawType.equals(targetInterface)) {
-                        // paramType is generic type containing response type
-                        Type responseType = paramType.getActualTypeArguments()[0];
-                        // for none explicit generic argument like TResponse result will be null
-                        var result = ResolvableType.forType(responseType).resolve();
-
-                        if (result != null && result != Object.class) {
-                            return result;
-                        }
-                    }
-                }
-            }
-        }
-
-        return null;
     }
 }
