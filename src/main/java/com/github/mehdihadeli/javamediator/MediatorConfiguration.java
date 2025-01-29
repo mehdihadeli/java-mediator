@@ -20,7 +20,7 @@ public class MediatorConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
-    public Mediator addMediator(ApplicationContext applicationContext) {
+    public Mediator mediator(ApplicationContext applicationContext) {
         return new MediatorImpl(applicationContext);
     }
 
@@ -33,7 +33,7 @@ public class MediatorConfiguration {
             havingValue = "true",
             matchIfMissing = true)
     public <TRequest extends IRequest<TResponse>, TResponse>
-    LogPipelineBehavior<TRequest, TResponse> addLogPipelineBehavior() {
+    LogPipelineBehavior<TRequest, TResponse> logPipelineBehavior() {
         return new LogPipelineBehavior<>();
     }
 }
