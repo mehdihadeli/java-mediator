@@ -16,7 +16,7 @@ jobs:
           java-version: '23'
           distribution: 'temurin'
 
-      - name: Publish with Maven
+      - name: Publish Package
         if: ${{ github.event_name == 'release' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GHC_TOKEN }}
